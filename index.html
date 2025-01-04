@@ -31,10 +31,12 @@
         label {
             display: flex;
             align-items: center;
+            gap: 10px;
         }
 
         input,
-        button {
+        button,
+        select {
             width: 100%;
             width: -webkit-fill-available;
             width: -moz-available;
@@ -51,11 +53,18 @@
             background-color: var(--input);
         }
 
-        input[type=checkbox] {
-            margin-right: 10px;
+        select {
+            background-color: var(--card);
         }
 
-        h2 {
+
+        input[type=checkbox] {
+            margin-right: 10px;
+            width: fit-content;
+        }
+
+        h2,
+        h3 {
             text-align: center;
         }
 
@@ -67,18 +76,30 @@
 
         button:hover {
             filter: brightness(150%);
+            cursor: pointer;
         }
 
         button:active {
             filter: brightness(175%);
             scale: 0.95;
         }
+
+        .multipleCmdContainer {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .multipleCmdContainer>div {
+            flex: 1 0 300px;
+            background-color: var(--input);
+        }
     </style>
 </head>
 
 <body>
     <h1>FFmpeg Merge Command</h1>
-    <p>Select the files, and we'll create the command for merging FFmpeg video source</p>
+    <p>Select the files, and we'll create the command for merging FFmpeg sources</p>
     <div class="card">
         <h2>Options:</h2>
         <label>
@@ -89,50 +110,81 @@
         </label><br>
         <label>
             File path: <input type="text" id="filePath">
-        </label>
-    </div><br><br>
+        </label><br>
+        <label>Add <input type="text" id="beforeName"> before the output file name</label>
+    </div><br>
     <button id="select">Select files</button><br><br>
-    <div class="card">
-        <h2>Command:</h2>
-        <code id="command">ffmpeg</code><br><br>
-        <button id="copy">Copy</button>
-    </div><br><br>
+    <div id="resultDiv" style="display: none;">
+        <div class="card">
+            <h2>Commands:</h2>
+            <div class="multipleCmdContainer">
+                <div class="card">
+                    <h3>FFmpeg command:</h3>
+                    <code id="command">ffmpeg</code><br><br>
+                    <button data-copy="command">Copy</button>
+                </div>
+                <div class="card">
+                    <h3>Remove files:</h3>
+                    <select id="cmdType">
+                        <option value="bash">Bash</option>
+                        <option value="powershell">Powershell</option>
+                        <option value="cmd">Windows CMD</option>
+                    </select><br><br>
+                    <code id="remove">rm</code><br><br>
+                    <button data-copy="remove">Copy</button>
+                </div>
+            </div>
+        </div><br><br>
+    </div>
     <a target="_blank" href="https://dinoosauro.github.io/ffmpeg-chapters-fetcher/">Convert timestamps to FFmetadata
-        chapters</a>
+        chapters</a><br>
+    <a target="_blank" href="https://github.com/dinoosauro/ffmpeg-merge-command">View the GitHub repository</a>
     <script>
-        function adaptSquareBrackets(str) {
-            return str.replace(/\"/g, `\\"`);
-        }
-        document.getElementById("select").onclick = () => {
-            Object.assign(document.createElement("input"), {
+        (() => {
+            if (navigator.platform === "Win32") document.getElementById("cmdType").value = "cmd";
+            function adaptQuotationMarks(str) {
+                return str.replace(/\"/g, `\\"`);
+            }
+            let filesToRemoveList = [];
+            function updateRemoveCommand() {
+                document.getElementById("remove").textContent = `${document.getElementById("cmdType").value === "cmd" ? "del /q " : "rm "}${document.getElementById("cmdType").value === "powershell" ? "-Path " : ""}${filesToRemoveList.join(document.getElementById("cmdType").value === "powershell" ? ", " : " ")}`;
+            }
+            const input = Object.assign(document.createElement("input"), {
                 type: "file",
                 multiple: true,
                 onchange: function (e) {
+                    filesToRemoveList = [];
+                    const filePath = adaptQuotationMarks(document.getElementById("filePath").value);
                     const [fileItems, textItems] = [[], []];
-                    for (const file of e.target.files) (file.name.endsWith(".txt") ? textItems : fileItems).push(file.name);
+                    document.getElementById("resultDiv").style.display = "block";
+                    for (const file of e.target.files) {
+                        (file.name.endsWith(".txt") ? textItems : fileItems).push(file.name);
+                        filesToRemoveList.push(`"${filePath}${adaptQuotationMarks(file.name)}"`);
+                    }
                     let str = "ffmpeg";
-                    const filePath = adaptSquareBrackets(document.getElementById("filePath").value);
-                    for (const file of fileItems) str += ` -i "${filePath}${adaptSquareBrackets(file)}"`;
+                    for (const file of fileItems) str += ` -i "${filePath}${adaptQuotationMarks(file)}"`;
                     if (textItems.length !== 0) {
                         str += ` -f ffmetadata`;
                         let metadataStr = "";
                         for (let i = 0; i < textItems.length; i++) {
-                            str += ` -i "${filePath}${adaptSquareBrackets(textItems[i])}"`;
+                            str += ` -i "${filePath}${adaptQuotationMarks(textItems[i])}"`;
                             metadataStr += ` -map_metadata ${fileItems.length + i}`;
                         }
                         str += metadataStr;
                     }
                     str += " -c copy";
                     let outputName = fileItems[0].substring(0, fileItems[0].lastIndexOf("."));
-                    if (document.getElementById("noSquare").checked) outputName = outputName.substring(0, outputName.lastIndexOf("[")).trim();
-                    str += ` "${filePath}${adaptSquareBrackets(`${outputName}.${document.getElementById("extension").value}`)}"`;
+                    if (document.getElementById("noSquare").checked && outputName.indexOf("[") !== -1) outputName = outputName.substring(0, outputName.lastIndexOf("[")).trim();
+                    str += ` "${filePath}${adaptQuotationMarks(`${document.getElementById("beforeName").value}${outputName}.${document.getElementById("extension").value}`)}"`;
                     document.getElementById("command").textContent = str;
+                    updateRemoveCommand();
                 }
-            }).click();
-        }
-        document.getElementById("copy").onclick = () => {
-            navigator.clipboard.writeText(document.getElementById("command").textContent);
-        }
+            })
+            document.getElementById("select").onclick = () => input.click();
+            for (const settingId of ["filePath", "extension", "noSquare", "beforeName"]) document.getElementById(settingId).onchange = () => input.dispatchEvent(new Event("change"));
+            document.getElementById("cmdType").onchange = () => updateRemoveCommand();
+            for (const item of document.querySelectorAll("[data-copy]")) item.onclick = () => navigator.clipboard.writeText(document.getElementById(item.getAttribute("data-copy")).textContent);
+        })()
     </script>
 </body>
 

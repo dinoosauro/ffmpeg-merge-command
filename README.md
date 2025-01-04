@@ -26,4 +26,10 @@ with the button.
 
 ## Privacy
 
-Everything is elaborated locally.
+Everything is elaborated locally, and nothing is sent to an external server. You
+can use this webpage offline by downloading the HTML source code (the "Work
+Sans" font won't be loaded, but everything else will work fine).
+
+## Screenshots
+
+![The UI of the website](./example.jpg)
