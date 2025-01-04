@@ -125,7 +125,7 @@
                     str += " -c copy";
                     let outputName = fileItems[0].substring(0, fileItems[0].lastIndexOf("."));
                     if (document.getElementById("noSquare").checked) outputName = outputName.substring(0, outputName.lastIndexOf("[")).trim();
-                    str += ` "${filePath}${adaptSquareBrackets(`${outputName}.${document.getElementById("extension").value}`)}`;
+                    str += ` "${filePath}${adaptSquareBrackets(`${outputName}.${document.getElementById("extension").value}`)}"`;
                     document.getElementById("command").textContent = str;
                 }
             }).click();
