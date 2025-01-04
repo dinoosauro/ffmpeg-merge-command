@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+    <title>FFmpeg Merge Command</title>
+    <style>
+        :root {
+            --background: #151515;
+            --text: #fafafa;
+            --card: #313131;
+            --font: "Work Sans", sans-serif;
+            --input: #515151;
+            --accent: #1f5e92;
+        }
+
+        a {
+            color: var(--text);
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            font-family: var(--font);
+            padding: 10px;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+        }
+
+        input,
+        button {
+            width: 100%;
+            width: -webkit-fill-available;
+            width: -moz-available;
+            border: 1px solid var(--text);
+            background-color: var(--accent);
+            border-radius: 8px;
+            font-family: var(--text);
+            color: var(--text);
+            padding: 10px;
+            transition: 0.2s ease-in-out;
+        }
+
+        input {
+            background-color: var(--input);
+        }
+
+        input[type=checkbox] {
+            margin-right: 10px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .card {
+            border-radius: 8px;
+            padding: 10px;
+            background-color: var(--card);
+        }
+
+        button:hover {
+            filter: brightness(150%);
+        }
+
+        button:active {
+            filter: brightness(175%);
+            scale: 0.95;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>FFmpeg Merge Command</h1>
+    <p>Select the files, and we'll create the command for merging FFmpeg video source</p>
+    <div class="card">
+        <h2>Options:</h2>
+        <label>
+            <input type="checkbox" id="noSquare" checked> Remove the last square brackets from the video
+        </label><br>
+        <label>
+            Output extension: <input type="text" value="mkv" id="extension">
+        </label><br>
+        <label>
+            File path: <input type="text" id="filePath">
+        </label>
+    </div><br><br>
+    <button id="select">Select files</button><br><br>
+    <div class="card">
+        <h2>Command:</h2>
+        <code id="command">ffmpeg</code><br><br>
+        <button id="copy">Copy</button>
+    </div><br><br>
+    <a target="_blank" href="https://dinoosauro.github.io/ffmpeg-chapters-fetcher/">Convert timestamps to FFmetadata
+        chapters</a>
+    <script>
+        function adaptSquareBrackets(str) {
+            return str.replace(/\"/g, `\\"`);
+        }
+        document.getElementById("select").onclick = () => {
+            Object.assign(document.createElement("input"), {
+                type: "file",
+                multiple: true,
+                onchange: function (e) {
+                    const [fileItems, textItems] = [[], []];
+                    for (const file of e.target.files) (file.name.endsWith(".txt") ? textItems : fileItems).push(file.name);
+                    let str = "ffmpeg";
+                    const filePath = adaptSquareBrackets(document.getElementById("filePath").value);
+                    for (const file of fileItems) str += ` -i "${filePath}${adaptSquareBrackets(file)}"`;
+                    if (textItems.length !== 0) {
+                        str += ` -f ffmetadata`;
+                        let metadataStr = "";
+                        for (let i = 0; i < textItems.length; i++) {
+                            str += ` -i "${filePath}${adaptSquareBrackets(textItems[i])}"`;
+                            metadataStr += ` -map_metadata ${fileItems.length + i}`;
+                        }
+                        str += metadataStr;
+                    }
+                    str += " -c copy";
+                    let outputName = fileItems[0].substring(0, fileItems[0].lastIndexOf("."));
+                    if (document.getElementById("noSquare").checked) outputName = outputName.substring(0, outputName.lastIndexOf("[")).trim();
+                    str += ` "${filePath}${adaptSquareBrackets(`${outputName}.${document.getElementById("extension").value}`)}`;
+                    document.getElementById("command").textContent = str;
+                }
+            }).click();
+        }
+        document.getElementById("copy").onclick = () => {
+            navigator.clipboard.writeText(document.getElementById("command").textContent);
+        }
+    </script>
+</body>
+
+</html>
