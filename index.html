@@ -34,7 +34,7 @@
             gap: 10px;
         }
 
-        input,
+        input:not([type=checkbox]),
         button,
         select {
             width: 100%;
@@ -59,9 +59,37 @@
 
 
         input[type=checkbox] {
-            margin-right: 10px;
-            width: fit-content;
+            width: 60px;
+            min-width: 60px;
+            appearance: none;
+            border-radius: 12px;
+            background-color: var(--card);
+            height: 20px;
+            position: relative;
+            transition: background-color 0.2s ease-in-out;
+            border: 1px solid var(--text);
         }
+
+        input[type=checkbox]::before {
+            content: "";
+            border-radius: 50%;
+            background-color: var(--text);
+            width: 14px;
+            height: 14px;
+            left: 2px;
+            top: 2px;
+            position: absolute;
+            transition: left 0.2s ease-in-out;
+        }
+
+        input[type=checkbox]:checked {
+            background-color: var(--accent);
+        }
+
+        input[type=checkbox]:checked::before {
+            left: 42px
+        }
+
 
         h2,
         h3 {
@@ -74,9 +102,13 @@
             background-color: var(--card);
         }
 
+        button:hover,
+        input[type=checkbox]:hover {
+            cursor: pointer;
+        }
+
         button:hover {
             filter: brightness(150%);
-            cursor: pointer;
         }
 
         button:active {
@@ -102,16 +134,37 @@
     <p>Select the files, and we'll create the command for merging FFmpeg sources</p>
     <div class="card">
         <h2>Options:</h2>
-        <label>
-            <input type="checkbox" id="noSquare" checked> Remove the last square brackets from the video
-        </label><br>
-        <label>
-            Output extension: <input type="text" value="mkv" id="extension">
-        </label><br>
-        <label>
-            File path: <input type="text" id="filePath">
-        </label><br>
-        <label>Add <input type="text" id="beforeName"> before the output file name</label>
+        <div class="multipleCmdContainer">
+            <div class="card">
+                <h3>Output file:</h3>
+                <label>
+                    Output extension: <input type="text" data-regeneratescript data-savevalue value="mkv"
+                        id="extension">
+                </label><br>
+                <label>Add <input type="text" data-regeneratescript data-savevalue id="beforeName"> before the output
+                    file
+                    name</label><br>
+                <label>Add <input type="text" data-regeneratescript data-savevalue id="afterName"> after the output file
+                    name</label><br>
+                <label>
+                    <input type="checkbox" id="noSquare" data-savevalue data-regeneratescript checked> Remove the last
+                    square
+                    brackets from the video
+                </label>
+            </div>
+            <div class="card">
+                <h3>File path:</h3>
+                <label>
+                    File path: <input data-savevalue data-regeneratescript type="text" id="filePath">
+                </label><br>
+                <label>
+                    <input type="checkbox" id="noPathInOutput" data-savevalue data-regeneratescript> Don't add the file
+                    path
+                    in
+                    the output file
+                </label>
+            </div>
+        </div>
     </div><br>
     <button id="select">Select files</button><br><br>
     <div id="resultDiv" style="display: none;">
@@ -125,7 +178,7 @@
                 </div>
                 <div class="card">
                     <h3>Remove files:</h3>
-                    <select id="cmdType">
+                    <select id="cmdType" data-savevalue>
                         <option value="bash">Bash</option>
                         <option value="powershell">Powershell</option>
                         <option value="cmd">Windows CMD</option>
@@ -141,6 +194,7 @@
     <a target="_blank" href="https://github.com/dinoosauro/ffmpeg-merge-command">View the GitHub repository</a>
     <script>
         (() => {
+            let isFileSelected = false;
             if (navigator.platform === "Win32") document.getElementById("cmdType").value = "cmd";
             function adaptQuotationMarks(str) {
                 return str.replace(/\"/g, `\\"`);
@@ -154,6 +208,7 @@
                 multiple: true,
                 onchange: function (e) {
                     filesToRemoveList = [];
+                    isFileSelected = true;
                     const filePath = adaptQuotationMarks(document.getElementById("filePath").value);
                     const [fileItems, textItems] = [[], []];
                     document.getElementById("resultDiv").style.display = "block";
@@ -175,15 +230,25 @@
                     str += " -c copy";
                     let outputName = fileItems[0].substring(0, fileItems[0].lastIndexOf("."));
                     if (document.getElementById("noSquare").checked && outputName.indexOf("[") !== -1) outputName = outputName.substring(0, outputName.lastIndexOf("[")).trim();
-                    str += ` "${filePath}${adaptQuotationMarks(`${document.getElementById("beforeName").value}${outputName}.${document.getElementById("extension").value}`)}"`;
+                    str += ` "${document.getElementById("noPathInOutput").checked ? "" : filePath}${adaptQuotationMarks(`${document.getElementById("beforeName").value}${outputName}${document.getElementById("afterName").value}.${document.getElementById("extension").value}`)}"`;
                     document.getElementById("command").textContent = str;
                     updateRemoveCommand();
                 }
             })
             document.getElementById("select").onclick = () => input.click();
-            for (const settingId of ["filePath", "extension", "noSquare", "beforeName"]) document.getElementById(settingId).onchange = () => input.dispatchEvent(new Event("change"));
-            document.getElementById("cmdType").onchange = () => updateRemoveCommand();
+            for (const regenerateScript of document.querySelectorAll("[data-regeneratescript]")) {
+                for (const eventType of ["input", "change"]) regenerateScript.addEventListener(eventType, () => isFileSelected && input.dispatchEvent(new Event("change")));
+            }
+            document.getElementById("cmdType").addEventListener("change", () => updateRemoveCommand());
             for (const item of document.querySelectorAll("[data-copy]")) item.onclick = () => navigator.clipboard.writeText(document.getElementById(item.getAttribute("data-copy")).textContent);
+            const settings = JSON.parse(localStorage.getItem("FFmpegMerge-Settings") ?? "{}");
+            for (const item of document.querySelectorAll("[data-savevalue]")) {
+                if (typeof settings[item.id] !== "undefined") item[item.type === "checkbox" ? "checked" : "value"] = settings[item.id];
+                item.addEventListener("change", () => {
+                    settings[item.id] = item[item.type === "checkbox" ? "checked" : "value"];
+                    localStorage.setItem("FFmpegMerge-Settings", JSON.stringify(settings));
+                })
+            }
         })()
     </script>
 </body>

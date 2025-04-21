@@ -10,25 +10,39 @@ Website URL: https://dinoosauro.github.io/ffmpeg-merge-command/
 
 ## Options
 
-When you open the webpage, you will be prompted:
+When you open the webpage, you'll immediately see two sections in the "Options"
+card.
 
-- If you want to remove the last square brackets from the output file name. The
-  reason for this is that I needed it, nothing else.
+### Output file:
+
+In this section you can customize:
+
 - The output extension of the file. You can choose whatever you want, as long as
   the container actually supports both the video and the audio codec. Keeping
   `mkv` is a safe option.
+- The text to add before (or after) the output file name.
+- If you want to remove the last square brackets from the output file name. The
+  reason for this is that I needed it, nothing else.
+
+### File path:
+
+In this section you can customize:
+
 - The file path of the selected files: for example, if they are on
   `/Users/HelloWorld/Downloads/`, write this path so that FFmpeg can find them
   even if you are not in the same folder in the terminal.
+- If you want to add the file path in the output file name.
 
 Then, select the files and the script will be generated. You can copy the output
 with the button.
 
-## Privacy
+## Privacy
 
 Everything is elaborated locally, and nothing is sent to an external server. You
 can use this webpage offline by downloading the HTML source code (the "Work
 Sans" font won't be loaded, but everything else will work fine).
+
+Settings are saved locally on your device.
 
 ## Screenshots
 
